@@ -1,0 +1,318 @@
+{
+	"info": {
+		"_postman_id": "e43cb924-e167-40df-8df8-dcad72ed2e48",
+		"name": "_Enablement - Experience Platform EMEA",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "0. Auth setup",
+			"item": [
+				{
+					"name": "INIT: Load Crypto Library for RS256",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "b5a98ae5-3bc1-44cb-bf84-b236dc8d908c",
+								"exec": [
+									"postman.setGlobalVariable(\"jsrsasign-js\", responseBody);",
+									"tests[\"Javascript load complete\"] = true; "
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://kjur.github.io/jsrsasign/jsrsasign-latest-all-min.js",
+							"protocol": "http",
+							"host": [
+								"kjur",
+								"github",
+								"io"
+							],
+							"path": [
+								"jsrsasign",
+								"jsrsasign-latest-all-min.js"
+							]
+						},
+						"description": "Load the RSA-Sign Crypto LIbrary in a global environment variable\n\nSource: http://kjur.github.io/jsrsasign/jsrsasign-latest-all-min.js\n\nGithub: https://github.com/kjur/jsrsasign"
+					},
+					"response": []
+				},
+				{
+					"name": "IMS: JWT Generate + Auth via User Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "765521e7-85b4-4c2a-8f26-f55e4e1029e6",
+								"exec": [
+									"var data = JSON.parse(responseBody);",
+									"",
+									"if (data.access_token) {",
+									"    postman.setEnvironmentVariable(\"ACCESS_TOKEN\", data.access_token);",
+									"} else {",
+									"    console.log(\"Unable to acquire ACCESS_TOKEN from Adobe IMS to make further calls to Adobe I/O APIs.\")",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "8efc387c-e520-4d63-a62d-a8be9df802f0",
+								"exec": [
+									"// Tips from: https://github.com/kjur/jsrsasign/issues/199",
+									"// https://github.com/kjur/jsrsasign/wiki/Tutorial-for-JWT-generation",
+									"",
+									"var navigator = {}; //fake a navigator object for the lib",
+									"var window = {}; //fake a window object for the lib",
+									"eval(postman.getGlobalVariable(\"jsrsasign-js\")); //import javascript jsrsasign",
+									"",
+									"",
+									"var header = {",
+									"\t\"alg\": \"RS256\"",
+									"};",
+									"",
+									"var data = {",
+									"\t\"exp\": Math.round(87000 + Date.now()/1000),",
+									"\t\"iss\": postman.getEnvironmentVariable(\"IMS_ORG\"),",
+									"\t\"sub\": postman.getEnvironmentVariable(\"TECHNICAL_ACCOUNT_ID\"),",
+									"\t\"aud\": \"https://\" + postman.getEnvironmentVariable(\"IMS\")+\"/c/\"+postman.getEnvironmentVariable(\"API_KEY\")",
+									"};",
+									"",
+									"meta_scopes = postman.getEnvironmentVariable(\"META_SCOPE\");",
+									"meta_scopes.forEach(function(scope){",
+									"    var meta_scope = \"https://\" + postman.getEnvironmentVariable(\"IMS\")+\"/s/\"+",
+									"                     scope;",
+									"    data[meta_scope] = true;",
+									"});",
+									"",
+									"var secret = postman.getEnvironmentVariable(\"PRIVATE_KEY\");",
+									"",
+									"if (!secret) {",
+									"    console.log(\"Ensure the Private Key is added to both INITIAL and CURRENT VALUES in the active Postman environment's PRIVATE_KEY variable.\");",
+									"}",
+									"",
+									"console.log(data);",
+									"",
+									"var sHeader = JSON.stringify(header);",
+									"var sPayload = JSON.stringify(data);",
+									"var sJWT = KJUR.jws.JWS.sign(\"RS256\", sHeader, sPayload, secret);",
+									"",
+									"console.log(sJWT);",
+									"",
+									"postman.setEnvironmentVariable(\"JWT_TOKEN\", sJWT);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "client_id",
+									"value": "{{API_KEY}}",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "{{CLIENT_SECRET}}",
+									"type": "text"
+								},
+								{
+									"key": "jwt_token",
+									"value": "{{JWT_TOKEN}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://{{IMS}}/ims/exchange/jwt/",
+							"protocol": "https",
+							"host": [
+								"{{IMS}}"
+							],
+							"path": [
+								"ims",
+								"exchange",
+								"jwt",
+								""
+							]
+						},
+						"description": "Generate a JWT token using the Crypto RS256\nSend to IMS for access_token"
+					},
+					"response": []
+				}
+			],
+			"description": "Test the Markdown",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "2c87691f-212e-41f1-a4e9-a4ae862ecf3f",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "bce33dd2-e396-419f-920f-573ae17ad9bc",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "1. Unified Profile Service",
+			"item": [
+				{
+					"name": "UPS - GET Profile by Entity ID & NS",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}"
+							},
+							{
+								"key": "x-gw-ims-org-id",
+								"value": "{{IMS_ORG}}"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{ACCESS_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "https://platform.adobe.io/data/core/ups/access/entities?entityId=21000000000000000000144041608857636504&entityIdNS=ecid&schema.name=_xdm.context.profile",
+							"protocol": "https",
+							"host": [
+								"platform",
+								"adobe",
+								"io"
+							],
+							"path": [
+								"data",
+								"core",
+								"ups",
+								"access",
+								"entities"
+							],
+							"query": [
+								{
+									"key": "entityId",
+									"value": "21000000000000000000144041608857636504"
+								},
+								{
+									"key": "entityIdNS",
+									"value": "ecid"
+								},
+								{
+									"key": "schema.name",
+									"value": "_xdm.context.profile"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "UPS - GET Profile & EE by Entity ID & NS",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}"
+							},
+							{
+								"key": "x-gw-ims-org-id",
+								"value": "{{IMS_ORG}}"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{ACCESS_TOKEN}}"
+							}
+						],
+						"url": {
+							"raw": "https://platform.adobe.io/data/core/ups/access/entities?schema.name=_xdm.context.experienceevent&relatedSchema.name=_xdm.context.profile&relatedEntityId=75649395243887820840206447260306478172&relatedEntityIdNS=ecid",
+							"protocol": "https",
+							"host": [
+								"platform",
+								"adobe",
+								"io"
+							],
+							"path": [
+								"data",
+								"core",
+								"ups",
+								"access",
+								"entities"
+							],
+							"query": [
+								{
+									"key": "schema.name",
+									"value": "_xdm.context.experienceevent"
+								},
+								{
+									"key": "relatedSchema.name",
+									"value": "_xdm.context.profile"
+								},
+								{
+									"key": "relatedEntityId",
+									"value": "75649395243887820840206447260306478172"
+								},
+								{
+									"key": "relatedEntityIdNS",
+									"value": "ecid"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "cc4f20dc-7876-453a-9d02-57a8efa392cf",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "9c5806c4-ea5f-4588-8ffd-d38c27fa0565",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			],
+			"protocolProfileBehavior": {}
+		}
+	],
+	"protocolProfileBehavior": {}
+}
